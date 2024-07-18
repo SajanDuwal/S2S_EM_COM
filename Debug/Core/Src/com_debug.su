@@ -1,0 +1,4 @@
+../Core/Src/com_debug.c:11:6:delay_us	24	static
+../Core/Src/com_debug.c:19:6:myDebug	16	static
+../Core/Src/com_debug.c:29:6:OBCDebug	16	static
+../Core/Src/com_debug.c:39:5:bufferSize	24	static

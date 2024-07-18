@@ -1,0 +1,8 @@
+../Drivers/STM32WLxx_HAL_Driver/Inc/stm32wlxx_ll_bus.h:449:22:LL_AHB2_GRP1_EnableClock	24	static
+../Drivers/STM32WLxx_Nucleo/stm32wlxx_nucleo_radio.c:47:9:BSP_RADIO_Init	32	static
+../Drivers/STM32WLxx_Nucleo/stm32wlxx_nucleo_radio.c:79:9:BSP_RADIO_DeInit	8	static
+../Drivers/STM32WLxx_Nucleo/stm32wlxx_nucleo_radio.c:106:9:BSP_RADIO_ConfigRFSwitch	16	static
+../Drivers/STM32WLxx_Nucleo/stm32wlxx_nucleo_radio.c:156:9:BSP_RADIO_GetTxConfig	4	static
+../Drivers/STM32WLxx_Nucleo/stm32wlxx_nucleo_radio.c:165:9:BSP_RADIO_GetWakeUpTime	4	static
+../Drivers/STM32WLxx_Nucleo/stm32wlxx_nucleo_radio.c:175:9:BSP_RADIO_IsTCXO	4	static
+../Drivers/STM32WLxx_Nucleo/stm32wlxx_nucleo_radio.c:185:9:BSP_RADIO_IsDCDC	4	static
