@@ -91,6 +91,8 @@ int OBC_HANDSHAKE_FLAG = 0;
 
 int DIGIPEATER_STATUS = 0;
 int BEACON_COUNT = 2;
+int COUNT_BEACON = 2;
+
 uint8_t PACKET_TYPE = 0;
 int DIGIPEATER_FLAG = 0;
 int DIGIPEATER_RX_FLAG = 0;
@@ -423,6 +425,8 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 					memset(OBC_UART_RX, '\0', obc_ilen);
 					memset(temp_tx_buffer, '\0', sizeof(temp_tx_buffer));
 
+					delay_us(500000);
+
 					pkt_params.PacketType = PACKET_TYPE_GFSK;
 					pkt_params.Params.Gfsk.PayloadLength = tx_buffer_len;
 					pkt_params.Params.Gfsk.PreambleLength = 8; /*Convert byte into bit*/
@@ -516,6 +520,7 @@ void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) {
 
 					if (PACKET_TYPE == 0xB1) {
 						BEACON_COUNT = 2;
+						COUNT_BEACON = 2;
 					}
 
 					OBC_SUCCESS_DATA_RX_FLAG = 1;
@@ -589,112 +594,296 @@ void DioIrqHndlr(RadioIrqMasks_t radioIrq) {
 				int gs_cmd_len = bit_destuffing(crc_buff, gs_cmd_buff,
 						crc_buff_len);
 				gs_cmd_len--;
-				myDebug("\nlength of command send to OBC: %d\r\n", gs_cmd_len);
+				myDebug("\nMain GS Command Length: %d\r\n", gs_cmd_len);
 				uint8_t main_gs_cmd[gs_cmd_len];
 				for (int i = 0; i < gs_cmd_len; i++) {
 					main_gs_cmd[i] = gs_cmd_buff[i];
 				}
 
-				if (main_gs_cmd[18] == 0x53 && main_gs_cmd[19] == 0x02
-						&& main_gs_cmd[20] == 0x53) {
-					DIGIPEATER_RX_FLAG = 1;
+				if (COUNT_BEACON == 1) {
+
+					if ((main_gs_cmd[18] == 0xDF && main_gs_cmd[19] == 0xAB
+							&& main_gs_cmd[20] == 0xD1) // Enable Digipeater Mission
+							|| (main_gs_cmd[18] == 0x53
+									&& main_gs_cmd[19] == 0x02
+									&& main_gs_cmd[20] == 0x53)) { // Digipeater Packet
+
+						myDebug("\n********GS Command failed: 0x%x\r\n");
+
+						OBC_UART_RX[0] = 0x53;	//header
+						OBC_UART_RX[1] = 0xac;	//packet_ type
+						OBC_UART_RX[2] = 0x04;	//length of info
+						OBC_UART_RX[3] = 0x02;	//mcu_no
+						OBC_UART_RX[4] = 0xfc;	//false command
+						OBC_UART_RX[5] = 0xee;	//error prefix
+						obc_ilen = OBC_UART_RX[2];
+
+						OBC_SUCCESS_DATA_RX_FLAG = 1;
+
+						memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+
+					} else if (main_gs_cmd[18] == 0xFD
+							&& main_gs_cmd[19] == 0xBA
+							&& main_gs_cmd[20] == 0xD0) {
+
+						BEACON_COUNT = 2;
+						OBC_SUCCESS_DATA_RX_FLAG = 0;
+						DIGIPEATER_STATUS = 0;
+						DIGIPEATER_FLAG = 0;
+
+						myDebug(" \n-------> Digipeater MODE OFF\n ");
+
+						OBC_UART_RX[0] = 0x53;	//header
+						OBC_UART_RX[1] = 0xac;	//packet_ type
+						OBC_UART_RX[2] = 0x04;	//length of info
+						OBC_UART_RX[3] = 0x02;	//mcu_no
+						OBC_UART_RX[4] = 0x00;	//Digipeater OFF
+						OBC_UART_RX[5] = 0xdd;	//Digipeater prefix
+						obc_ilen = OBC_UART_RX[2];
+
+						if (HAL_UART_Transmit(&huart2, main_gs_cmd,
+								sizeof(main_gs_cmd), 2000) == HAL_OK
+								|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
+										sizeof(main_gs_cmd), 2000)) {
+
+							for (int i = 0; i < gs_cmd_len; i++) {
+								myDebug("%02x ", main_gs_cmd[i]);
+							}
+
+							memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+							memset(rx_buffer, '\0', sizeof(rx_buffer));
+							memset(temp_check_buff, '\0',
+									sizeof(temp_check_buff));
+							memset(crc_buff, '\0', sizeof(crc_buff));
+							memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
+						}
+
+						OBC_SUCCESS_DATA_RX_FLAG = 1;
+
+					} else {
+						myDebug("\nLength of Command sent to OBC: %d\r\n",
+								gs_cmd_len);
+						if (HAL_UART_Transmit(&huart2, main_gs_cmd,
+								sizeof(main_gs_cmd), 2000) == HAL_OK
+								|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
+										sizeof(main_gs_cmd), 2000)) {
+
+							for (int i = 0; i < gs_cmd_len; i++) {
+								myDebug("%02x ", main_gs_cmd[i]);
+							}
+
+							memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+							memset(rx_buffer, '\0', sizeof(rx_buffer));
+							memset(temp_check_buff, '\0',
+									sizeof(temp_check_buff));
+							memset(crc_buff, '\0', sizeof(crc_buff));
+							memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
+
+							myDebug("\n\n_____OBC__RECEIVER_____\r\n");
+						}
+
+					}
+				} else if (COUNT_BEACON == 0) {
+					if (DIGIPEATER_STATUS == 1) {
+						if (main_gs_cmd[18] == 0xFD && main_gs_cmd[19] == 0xBA
+								&& main_gs_cmd[20] == 0xD0) {
+
+							BEACON_COUNT = 2;
+							OBC_SUCCESS_DATA_RX_FLAG = 0;
+							DIGIPEATER_STATUS = 0;
+							DIGIPEATER_FLAG = 0;
+
+							myDebug(" \n-------> Digipeater MODE OFF\n ");
+
+							OBC_UART_RX[0] = 0x53;	//header
+							OBC_UART_RX[1] = 0xac;	//packet_ type
+							OBC_UART_RX[2] = 0x04;	//length of info
+							OBC_UART_RX[3] = 0x02;	//mcu_no
+							OBC_UART_RX[4] = 0x00;	//Digipeater OFF
+							OBC_UART_RX[5] = 0xdd;	//Digipeater prefix
+							obc_ilen = OBC_UART_RX[2];
+
+							if (HAL_UART_Transmit(&huart2, main_gs_cmd,
+									sizeof(main_gs_cmd), 2000) == HAL_OK
+									|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
+											sizeof(main_gs_cmd), 2000)) {
+
+								for (int i = 0; i < gs_cmd_len; i++) {
+									myDebug("%02x ", main_gs_cmd[i]);
+								}
+
+								memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+								memset(rx_buffer, '\0', sizeof(rx_buffer));
+								memset(temp_check_buff, '\0',
+										sizeof(temp_check_buff));
+								memset(crc_buff, '\0', sizeof(crc_buff));
+								memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
+							}
+
+							OBC_SUCCESS_DATA_RX_FLAG = 1;
+
+						} else if (main_gs_cmd[18] == 0x53
+								&& main_gs_cmd[19] == 0x02
+								&& main_gs_cmd[20] == 0x53) {
+							myDebug(
+									"\nLength of Digipeater sent to OBC: %d\r\n",
+									gs_cmd_len);
+							if (HAL_UART_Transmit(&huart2, main_gs_cmd,
+									sizeof(main_gs_cmd), 2000) == HAL_OK
+									|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
+											sizeof(main_gs_cmd), 2000)) {
+
+								for (int i = 0; i < gs_cmd_len; i++) {
+									myDebug("%02x ", main_gs_cmd[i]);
+								}
+
+								memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+								memset(rx_buffer, '\0', sizeof(rx_buffer));
+								memset(temp_check_buff, '\0',
+										sizeof(temp_check_buff));
+								memset(crc_buff, '\0', sizeof(crc_buff));
+								memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
+
+								myDebug(
+										"\n\n_____DIGIPEATER_OBC__RECEIVER_____\r\n");
+							}
+						} else {
+							myDebug("\n********GS Command failed: 0x%x\r\n");
+
+							OBC_UART_RX[0] = 0x53;	//header
+							OBC_UART_RX[1] = 0xac;	//packet_ type
+							OBC_UART_RX[2] = 0x04;	//length of info
+							OBC_UART_RX[3] = 0x02;	//mcu_no
+							OBC_UART_RX[4] = 0xfc;	//false command
+							OBC_UART_RX[5] = 0xee;	//error prefix
+							obc_ilen = OBC_UART_RX[2];
+
+							OBC_SUCCESS_DATA_RX_FLAG = 1;
+
+							memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+
+						}
+					} else if (DIGIPEATER_STATUS == 0) {
+						if (main_gs_cmd[18] == 0xFD && main_gs_cmd[19] == 0xBA
+								&& main_gs_cmd[20] == 0xD0) {
+
+							BEACON_COUNT = 2;
+							OBC_SUCCESS_DATA_RX_FLAG = 0;
+							DIGIPEATER_STATUS = 0;
+							DIGIPEATER_FLAG = 0;
+
+							myDebug(" \n-------> Digipeater MODE OFF\n ");
+
+							OBC_UART_RX[0] = 0x53;	//header
+							OBC_UART_RX[1] = 0xac;	//packet_ type
+							OBC_UART_RX[2] = 0x04;	//length of info
+							OBC_UART_RX[3] = 0x02;	//mcu_no
+							OBC_UART_RX[4] = 0x00;	//Digipeater OFF
+							OBC_UART_RX[5] = 0xdd;	//Digipeater prefix
+							obc_ilen = OBC_UART_RX[2];
+
+							if (HAL_UART_Transmit(&huart2, main_gs_cmd,
+									sizeof(main_gs_cmd), 2000) == HAL_OK
+									|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
+											sizeof(main_gs_cmd), 2000)) {
+
+								for (int i = 0; i < gs_cmd_len; i++) {
+									myDebug("%02x ", main_gs_cmd[i]);
+								}
+
+								memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+								memset(rx_buffer, '\0', sizeof(rx_buffer));
+								memset(temp_check_buff, '\0',
+										sizeof(temp_check_buff));
+								memset(crc_buff, '\0', sizeof(crc_buff));
+								memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
+							}
+
+							OBC_SUCCESS_DATA_RX_FLAG = 1;
+
+						} else if (main_gs_cmd[18] == 0xDF
+								&& main_gs_cmd[19] == 0xAB
+								&& main_gs_cmd[20] == 0xD1) {
+
+							BEACON_COUNT = 0;
+							OBC_SUCCESS_DATA_RX_FLAG = 0;
+							DIGIPEATER_STATUS = 1;
+							DIGIPEATER_RX_FLAG = 1;
+
+							myDebug(" \nDigipeater MODE ON\n ");
+
+							OBC_UART_RX[0] = 0x53;	//header
+							OBC_UART_RX[1] = 0xac;	//packet_ type
+							OBC_UART_RX[2] = 0x04;	//length of info
+							OBC_UART_RX[3] = 0x02;	//mcu_no
+							OBC_UART_RX[4] = 0x01;	//Digipeater OFF
+							OBC_UART_RX[5] = 0xdd;	//Digipeater prefix
+							obc_ilen = OBC_UART_RX[2];
+
+							if (HAL_UART_Transmit(&huart2, main_gs_cmd,
+									sizeof(main_gs_cmd), 2000) == HAL_OK
+									|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
+											sizeof(main_gs_cmd), 2000)) {
+
+								for (int i = 0; i < gs_cmd_len; i++) {
+									myDebug("%02x ", main_gs_cmd[i]);
+								}
+
+								memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+								memset(rx_buffer, '\0', sizeof(rx_buffer));
+								memset(temp_check_buff, '\0',
+										sizeof(temp_check_buff));
+								memset(crc_buff, '\0', sizeof(crc_buff));
+								memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
+							}
+
+							OBC_SUCCESS_DATA_RX_FLAG = 1;
+
+						} else if (main_gs_cmd[18] == 0x53
+								&& main_gs_cmd[19] == 0x02
+								&& main_gs_cmd[20] == 0x53) { // Digipeater Packet
+
+							myDebug("\n********GS Command failed: 0x%x\r\n");
+
+							OBC_UART_RX[0] = 0x53;	//header
+							OBC_UART_RX[1] = 0xac;	//packet_ type
+							OBC_UART_RX[2] = 0x04;	//length of info
+							OBC_UART_RX[3] = 0x02;	//mcu_no
+							OBC_UART_RX[4] = 0xfc;	//false command
+							OBC_UART_RX[5] = 0xee;	//error prefix
+							obc_ilen = OBC_UART_RX[2];
+
+							OBC_SUCCESS_DATA_RX_FLAG = 1;
+
+							memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+
+						} else {
+							myDebug("\nLength of Command sent to OBC: %d\r\n",
+									gs_cmd_len);
+							if (HAL_UART_Transmit(&huart2, main_gs_cmd,
+									sizeof(main_gs_cmd), 2000) == HAL_OK
+									|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
+											sizeof(main_gs_cmd), 2000)) {
+
+								for (int i = 0; i < gs_cmd_len; i++) {
+									myDebug("%02x ", main_gs_cmd[i]);
+								}
+
+								memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
+								memset(rx_buffer, '\0', sizeof(rx_buffer));
+								memset(temp_check_buff, '\0',
+										sizeof(temp_check_buff));
+								memset(crc_buff, '\0', sizeof(crc_buff));
+								memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
+
+								myDebug("\n\n_____OBC__RECEIVER_____\r\n");
+							}
+
+						}
+					}
 				}
-
-				if (main_gs_cmd[18] == 0xDF && main_gs_cmd[19] == 0xAB
-						&& main_gs_cmd[20] == 0xD1) {
-
-					BEACON_COUNT = 0;
-					OBC_SUCCESS_DATA_RX_FLAG = 0;
-					DIGIPEATER_STATUS = 1;
-					DIGIPEATER_RX_FLAG = 1;
-
-					myDebug(" \nDigipeater MODE ON\n ");
-
-					OBC_UART_RX[0] = 0x53;	//header
-					OBC_UART_RX[1] = 0xac;	//packet_ type
-					OBC_UART_RX[2] = 0x04;	//length of info
-					OBC_UART_RX[3] = 0x02;	//mcu_no
-					OBC_UART_RX[4] = 0x01;	//Digipeater OFF
-					OBC_UART_RX[5] = 0xdd;	//Digipeater prefix
-					obc_ilen = OBC_UART_RX[2];
-
-					if (HAL_UART_Transmit(&huart2, main_gs_cmd,
-							sizeof(main_gs_cmd), 2000) == HAL_OK
-							|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
-									sizeof(main_gs_cmd), 2000)) {
-
-						for (int i = 0; i < gs_cmd_len; i++) {
-							myDebug("%02x ", main_gs_cmd[i]);
-						}
-
-						memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
-						memset(rx_buffer, '\0', sizeof(rx_buffer));
-						memset(temp_check_buff, '\0', sizeof(temp_check_buff));
-						memset(crc_buff, '\0', sizeof(crc_buff));
-						memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
-					}
-
-					OBC_SUCCESS_DATA_RX_FLAG = 1;
-
-				} else if (main_gs_cmd[18] == 0xFD && main_gs_cmd[19] == 0xBA
-						&& main_gs_cmd[20] == 0xD0) {
-
-					BEACON_COUNT = 2;
-					OBC_SUCCESS_DATA_RX_FLAG = 0;
-					DIGIPEATER_STATUS = 0;
-					DIGIPEATER_FLAG = 0;
-
-					myDebug(" \nDigipeater MODE OFF\n ");
-
-					OBC_UART_RX[0] = 0x53;	//header
-					OBC_UART_RX[1] = 0xac;	//packet_ type
-					OBC_UART_RX[2] = 0x04;	//length of info
-					OBC_UART_RX[3] = 0x02;	//mcu_no
-					OBC_UART_RX[4] = 0x00;	//Digipeater OFF
-					OBC_UART_RX[5] = 0xdd;	//Digipeater prefix
-					obc_ilen = OBC_UART_RX[2];
-
-					if (HAL_UART_Transmit(&huart2, main_gs_cmd,
-							sizeof(main_gs_cmd), 2000) == HAL_OK
-							|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
-									sizeof(main_gs_cmd), 2000)) {
-
-						for (int i = 0; i < gs_cmd_len; i++) {
-							myDebug("%02x ", main_gs_cmd[i]);
-						}
-
-						memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
-						memset(rx_buffer, '\0', sizeof(rx_buffer));
-						memset(temp_check_buff, '\0', sizeof(temp_check_buff));
-						memset(crc_buff, '\0', sizeof(crc_buff));
-						memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
-					}
-
-					OBC_SUCCESS_DATA_RX_FLAG = 1;
-
-				} else {
-
-					if (HAL_UART_Transmit(&huart2, main_gs_cmd,
-							sizeof(main_gs_cmd), 2000) == HAL_OK
-							|| HAL_UART_Transmit(&hlpuart1, main_gs_cmd,
-									sizeof(main_gs_cmd), 2000)) {
-
-						for (int i = 0; i < gs_cmd_len; i++) {
-							myDebug("%02x ", main_gs_cmd[i]);
-						}
-
-						memset(main_gs_cmd, '\0', sizeof(main_gs_cmd));
-						memset(rx_buffer, '\0', sizeof(rx_buffer));
-						memset(temp_check_buff, '\0', sizeof(temp_check_buff));
-						memset(crc_buff, '\0', sizeof(crc_buff));
-						memset(gs_cmd_buff, '\0', sizeof(gs_cmd_buff));
-
-						myDebug("\n\n_____OBC__RECEIVER_____\r\n");
-					}
-				}
-
 			} else {
-				myDebug("\nGS Command checksum incorrect: 0x%x\r\n");
+				myDebug("\n********GS Command checksum incorrect: 0x%x\r\n");
 
 				OBC_UART_RX[0] = 0x53;	//header
 				OBC_UART_RX[1] = 0xac;	//packet_ type
@@ -705,11 +894,10 @@ void DioIrqHndlr(RadioIrqMasks_t radioIrq) {
 				obc_ilen = OBC_UART_RX[2];
 
 				OBC_SUCCESS_DATA_RX_FLAG = 1;
-
 			}
 		} else {
 			myDebug(
-					"\nGS Command Not Complete 7e.....7e not received: 0x%x\r\n");
+					"\n********GS Command Not Complete 7e.....7e not received: 0x%x\r\n");
 
 			OBC_UART_RX[0] = 0x53;	//header
 			OBC_UART_RX[1] = 0xac;	//packet_ type
@@ -720,7 +908,6 @@ void DioIrqHndlr(RadioIrqMasks_t radioIrq) {
 			obc_ilen = OBC_UART_RX[2];
 
 			OBC_SUCCESS_DATA_RX_FLAG = 1;
-
 		}
 
 		SUBGRF_SetRfFrequency(FREQ_435_MHZ);
@@ -746,6 +933,7 @@ void DioIrqHndlr(RadioIrqMasks_t radioIrq) {
 
 		if (PACKET_TYPE == 0xB1 || PACKET_TYPE == 0xB2) {
 			BEACON_COUNT--;
+			COUNT_BEACON--;
 			PACKET_TYPE = 0;
 		}
 
@@ -764,6 +952,8 @@ void DioIrqHndlr(RadioIrqMasks_t radioIrq) {
 		} else {
 			DIGIPEATER_STATUS = 0;
 		}
+
+		delay_us(500000);
 
 		pkt_params.PacketType = PACKET_TYPE_GFSK;
 		pkt_params.Params.Gfsk.PayloadLength = RX_BUFF_LENGTH;

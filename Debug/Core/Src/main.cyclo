@@ -1,6 +1,6 @@
-../Core/Src/main.c:109:5:countsDataBetweenFlags	5
-../Core/Src/main.c:137:5:main	4
-../Core/Src/main.c:346:6:SystemClock_Config	3
-../Core/Src/main.c:387:6:HAL_UART_RxCpltCallback	20
-../Core/Src/main.c:542:6:DioIrqHndlr	31
-../Core/Src/main.c:836:6:Error_Handler	1
+../Core/Src/main.c:111:5:countsDataBetweenFlags	5
+../Core/Src/main.c:139:5:main	4
+../Core/Src/main.c:348:6:SystemClock_Config	3
+../Core/Src/main.c:389:6:HAL_UART_RxCpltCallback	20
+../Core/Src/main.c:547:6:DioIrqHndlr	62
+../Core/Src/main.c:1026:6:Error_Handler	1

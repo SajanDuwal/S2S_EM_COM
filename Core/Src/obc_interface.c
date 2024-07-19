@@ -16,7 +16,7 @@ uint8_t MainCMDHs[ACK_LENGTH];
 
 void WAIT_FOR_HANDSHAKE() {
 
-	memset(MainCMDHs, '\0', sizeof(MainCMDHs));
+	memset(MainCMDHs, '\0', ACK_LENGTH);
 	OBC_HANDSHAKE_FLAG = 0;
 	if (HAL_UART_Receive(&huart2, MainCMDHs, ACK_LENGTH, 7000) == HAL_OK
 			|| HAL_UART_Receive(&hlpuart1, MainCMDHs, ACK_LENGTH, 7000)
@@ -41,7 +41,7 @@ void WAIT_FOR_HANDSHAKE() {
 					}
 					myDebug("\n");
 					OBC_HANDSHAKE_FLAG = 1;
-					memset(MainCMDHs, '\0', sizeof(MainCMDHs));
+					memset(MainCMDHs, '\0', ACK_LENGTH);
 				}
 			} else {
 				myDebug("*** Unknown Handshake command received!\n");
@@ -54,7 +54,7 @@ void WAIT_FOR_HANDSHAKE() {
 						myDebug("%02x ", MainCMDHs[i]);
 					}
 					myDebug("\n");
-					memset(MainCMDHs, '\0', sizeof(MainCMDHs));
+					memset(MainCMDHs, '\0',ACK_LENGTH);
 					OBC_HANDSHAKE_FLAG = 0;
 					WAIT_FOR_HANDSHAKE();
 				}
@@ -72,7 +72,7 @@ void WAIT_FOR_HANDSHAKE() {
 					}
 					myDebug("\n");
 					OBC_HANDSHAKE_FLAG = 1;
-					memset(MainCMDHs, '\0', sizeof(MainCMDHs));
+					memset(MainCMDHs, '\0', ACK_LENGTH);
 				}
 			} else {
 				myDebug("*** Unknown Handshake command received!\n");
@@ -85,7 +85,7 @@ void WAIT_FOR_HANDSHAKE() {
 						myDebug("%02x ", MainCMDHs[i]);
 					}
 					myDebug("\n");
-					memset(MainCMDHs, '\0', sizeof(MainCMDHs));
+					memset(MainCMDHs, '\0', ACK_LENGTH);
 					OBC_HANDSHAKE_FLAG = 0;
 					WAIT_FOR_HANDSHAKE();
 				}
@@ -94,7 +94,7 @@ void WAIT_FOR_HANDSHAKE() {
 	} else {
 		OBC_HANDSHAKE_FLAG = 0;
 		myDebug("*** Handshake Command receive failed, try again!\n");
-		memset(MainCMDHs, '\0', sizeof(MainCMDHs));
+		memset(MainCMDHs, '\0', ACK_LENGTH);
 		WAIT_FOR_HANDSHAKE();
 	}
 }
