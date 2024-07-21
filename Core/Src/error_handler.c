@@ -68,7 +68,7 @@ int bit_stuffing(uint8_t *data, uint8_t *output_data, int length) {
 		for (int bit = 7; bit >= 0; bit--) {
 			int bit_val = (data[i] >> bit) & 1;
 
-		//	myDebug("%d ", bit_val);
+			//	myDebug("%d ", bit_val);
 
 			current_byte |= (bit_val << bit_pos);
 			bit_pos--;
@@ -128,43 +128,43 @@ int bit_stuffing(uint8_t *data, uint8_t *output_data, int length) {
 }
 
 int bit_destuffing(uint8_t *data, uint8_t *output_data, int length) {
-    int out_index = 0;
-    int bit_count = 0;
-    uint8_t current_byte = 0;
-    int bit_pos = 7;
+	int out_index = 0;
+	int bit_count = 0;
+	uint8_t current_byte = 0;
+	int bit_pos = 7;
 
-    for (int i = 0; i < length; i++) {
-        for (int bit = 7; bit >= 0; bit--) {
-            int bit_val = (data[i] >> bit) & 1;
+	for (int i = 0; i < length; i++) {
+		for (int bit = 7; bit >= 0; bit--) {
+			int bit_val = (data[i] >> bit) & 1;
 
-            if (bit_val) {
-                bit_count++;
-                current_byte |= (bit_val << bit_pos);
-                bit_pos--;
-            } else {
-                if (bit_count == 5) {
-                    // Skip this bit as it is a stuffed bit
-                    bit_count = 0;
-                    continue;
-                } else {
-                    bit_count = 0;
-                    current_byte |= (bit_val << bit_pos);
-                    bit_pos--;
-                }
-            }
+			if (bit_val) {
+				bit_count++;
+				current_byte |= (bit_val << bit_pos);
+				bit_pos--;
+			} else {
+				if (bit_count == 5) {
+					// Skip this bit as it is a stuffed bit
+					bit_count = 0;
+					continue;
+				} else {
+					bit_count = 0;
+					current_byte |= (bit_val << bit_pos);
+					bit_pos--;
+				}
+			}
 
-            if (bit_pos < 0) {
-                output_data[out_index++] = current_byte;
-                current_byte = 0;
-                bit_pos = 7;
-            }
-        }
-    }
+			if (bit_pos < 0) {
+				output_data[out_index++] = current_byte;
+				current_byte = 0;
+				bit_pos = 7;
+			}
+		}
+	}
 
-    // Ensure the last byte is written if it's partially filled
-    if (bit_pos < 7) {
-        output_data[out_index++] = current_byte;
-    }
+	// Ensure the last byte is written if it's partially filled
+	if (bit_pos < 7) {
+		output_data[out_index++] = current_byte;
+	}
 
 //	myDebug("Error handler: After bit de-stuffing \n");
 //
@@ -177,5 +177,45 @@ int bit_destuffing(uint8_t *data, uint8_t *output_data, int length) {
 //	}
 //	myDebug("\n");
 
-    return out_index;
+	return out_index;
 }
+
+int check_packet_type(uint8_t *OBC_UART) {
+	uint8_t packet_type_true = 0;
+	switch (OBC_UART[1]) {
+
+	case 0xb1:						// beacon_type_1
+		packet_type_true = 1;
+		break;
+
+	case 0xb2:						// beacon_type_2
+		packet_type_true = 1;
+		break;
+
+	case 0xac:						// ack
+		packet_type_true = 1;
+		break;
+
+	case 0x0a:						// digipeater packet
+		packet_type_true = 1;
+		break;
+
+	case 0x0e:						// epdm
+		packet_type_true = 1;
+		break;
+
+	case 0x0c:						// camera
+		packet_type_true = 1;
+		break;
+
+	case 0x0d:						// adcs
+		packet_type_true = 1;
+		break;
+
+	default:
+		packet_type_true = 0;
+	}
+
+	return packet_type_true;
+}
+

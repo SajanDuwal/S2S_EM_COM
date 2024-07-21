@@ -27,68 +27,43 @@ void WAIT_FOR_HANDSHAKE() {
 		}
 		myDebug("\n");
 
-		if (MainCMDHs[0] == 0) {
+		uint8_t header = 0x00;
 
-			if (MainCMDHs[1] == ACK_HEAD && MainCMDHs[6] == ACK_TAIL) {
-				myDebug("--> Command Acknowledged successful!\n");
-				if (HAL_UART_Transmit(&huart2, MainCMDHs, ACK_LENGTH, 2000)
-						== HAL_OK
-						|| HAL_UART_Transmit(&hlpuart1, MainCMDHs, ACK_LENGTH,
-								2000) == HAL_OK) {
-					myDebug("--> Handshake ACK, re-transmit to OBC: \n");
-					for (int i = 0; i < (ACK_LENGTH); i++) {
-						myDebug("%02x ", MainCMDHs[i]);
-					}
-					myDebug("\n");
-					OBC_HANDSHAKE_FLAG = 1;
-					memset(MainCMDHs, '\0', ACK_LENGTH);
+		if (MainCMDHs[0] == header) {
+
+			for (int loop1 = 0; loop1 < sizeof(MainCMDHs); loop1++) {
+				MainCMDHs[loop1] = MainCMDHs[loop1 + 1];
+			}
+		}
+
+		if (MainCMDHs[0] == ACK_HEAD && MainCMDHs[5] == ACK_TAIL) {
+			myDebug("--> Command Acknowledged successful!\n");
+			if (HAL_UART_Transmit(&huart2, MainCMDHs, ACK_LENGTH, 2000)
+					== HAL_OK
+					|| HAL_UART_Transmit(&hlpuart1, MainCMDHs, ACK_LENGTH, 2000)
+							== HAL_OK) {
+				myDebug("--> Handshake ACK, re-transmit to OBC: \n");
+				for (int i = 0; i < (ACK_LENGTH); i++) {
+					myDebug("%02x ", MainCMDHs[i]);
 				}
-			} else {
-				myDebug("*** Unknown Handshake command received!\n");
-				if (HAL_UART_Transmit(&huart2, MainCMDHs, ACK_LENGTH, 2000)
-						== HAL_OK
-						|| HAL_UART_Transmit(&hlpuart1, MainCMDHs, ACK_LENGTH,
-								7000) == HAL_OK) {
-					myDebug("--> Unknown Handshake ACK, re-transmit to OBC.\n");
-					for (int i = 0; i < (ACK_LENGTH); i++) {
-						myDebug("%02x ", MainCMDHs[i]);
-					}
-					myDebug("\n");
-					memset(MainCMDHs, '\0',ACK_LENGTH);
-					OBC_HANDSHAKE_FLAG = 0;
-					WAIT_FOR_HANDSHAKE();
-				}
+				myDebug("\n");
+				OBC_HANDSHAKE_FLAG = 1;
+				memset(MainCMDHs, '\0', ACK_LENGTH);
 			}
 		} else {
-			if (MainCMDHs[0] == ACK_HEAD && MainCMDHs[5] == ACK_TAIL) {
-				myDebug("--> Command Acknowledged successful!\n");
-				if (HAL_UART_Transmit(&huart2, MainCMDHs, ACK_LENGTH, 2000)
-						== HAL_OK
-						|| HAL_UART_Transmit(&hlpuart1, MainCMDHs, ACK_LENGTH,
-								2000) == HAL_OK) {
-					myDebug("--> Handshake ACK, re-transmit to OBC: \n");
-					for (int i = 0; i < (ACK_LENGTH); i++) {
-						myDebug("%02x ", MainCMDHs[i]);
-					}
-					myDebug("\n");
-					OBC_HANDSHAKE_FLAG = 1;
-					memset(MainCMDHs, '\0', ACK_LENGTH);
+			myDebug("*** Unknown Handshake command received!\n");
+			if (HAL_UART_Transmit(&huart2, MainCMDHs, ACK_LENGTH, 2000)
+					== HAL_OK
+					|| HAL_UART_Transmit(&hlpuart1, MainCMDHs, ACK_LENGTH, 7000)
+							== HAL_OK) {
+				myDebug("--> Unknown Handshake ACK, re-transmit to OBC.\n");
+				for (int i = 0; i < (ACK_LENGTH); i++) {
+					myDebug("%02x ", MainCMDHs[i]);
 				}
-			} else {
-				myDebug("*** Unknown Handshake command received!\n");
-				if (HAL_UART_Transmit(&huart2, MainCMDHs, ACK_LENGTH, 2000)
-						== HAL_OK
-						|| HAL_UART_Transmit(&hlpuart1, MainCMDHs, ACK_LENGTH,
-								7000) == HAL_OK) {
-					myDebug("--> Unknown Handshake ACK, re-transmit to OBC.\n");
-					for (int i = 0; i < (ACK_LENGTH); i++) {
-						myDebug("%02x ", MainCMDHs[i]);
-					}
-					myDebug("\n");
-					memset(MainCMDHs, '\0', ACK_LENGTH);
-					OBC_HANDSHAKE_FLAG = 0;
-					WAIT_FOR_HANDSHAKE();
-				}
+				myDebug("\n");
+				memset(MainCMDHs, '\0', ACK_LENGTH);
+				OBC_HANDSHAKE_FLAG = 0;
+				WAIT_FOR_HANDSHAKE();
 			}
 		}
 	} else {
@@ -98,4 +73,3 @@ void WAIT_FOR_HANDSHAKE() {
 		WAIT_FOR_HANDSHAKE();
 	}
 }
-

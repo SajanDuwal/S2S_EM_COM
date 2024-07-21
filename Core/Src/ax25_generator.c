@@ -21,27 +21,27 @@ void updatePacket(uint8_t *OBC_Rx_buffer) {
 	int j = 1;
 	int k = 3;
 	int len_of_payload = OBC_Rx_buffer[2];  // length of info_field
-	myDebug("\nlen_of_payload: %d\r\n", len_of_payload);
+//	myDebug("\nlen_of_payload: %d\r\n", len_of_payload);
 	for (int i = 0; i < len_of_payload; i++) {
 		info_packet[j] = OBC_Rx_buffer[k];
 		j++;
 		k++;
 	}
-	myDebug("info_packet: 0x%x\r\n", info_packet);
-	for (int i = 0; i < len_of_payload; i++) {
-		myDebug("%02x ", info_packet[i]);
-	}
-	myDebug("\r\n");
+//	myDebug("info_packet: 0x%x\r\n", info_packet);
+//	for (int i = 0; i < len_of_payload; i++) {
+//		myDebug("%02x ", info_packet[i]);
+//	}
+//	myDebug("\r\n");
 }
 
 void getHDLCPacket(uint8_t *data, uint8_t data_len) {
 
-	myDebug("After Bit stuffing: \n");
-	myDebug("length of stuffed_packet: %d\r\n", data_len);
-	for (int j = 0; j < data_len; j++) {
-		myDebug("%02x ", data[j]);
-	}
-	myDebug("\r\n");
+//	myDebug("After Bit stuffing: \n");
+//	myDebug("length of stuffed_packet: %d\r\n", data_len);
+//	for (int j = 0; j < data_len; j++) {
+//		myDebug("%02x ", data[j]);
+//	}
+//	myDebug("\r\n");
 
 	uint16_t crc = 0;
 	crc = calculateCRC_CCITT_AX25(data, data_len);
@@ -118,8 +118,9 @@ void getAX25Packet(uint8_t *OBC_data_Field, uint8_t size) {
 		i++;
 	}
 
-	myDebug("Before Bit stuffing: \n");
-	myDebug("length before Bit Stuffing: %d \r\n", i);
+//	myDebug("Before Bit stuffing:");
+	myDebug("\nReal Data, Length: %d", i);
+	myDebug("\r\n");
 	for (int j = 0; j < i; j++) {
 		myDebug("%02x ", ax_buffer[j]);
 	}

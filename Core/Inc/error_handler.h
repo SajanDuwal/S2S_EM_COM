@@ -19,4 +19,6 @@ int bit_stuffing(uint8_t *data, uint8_t *output_data, int length);
 
 int bit_destuffing(uint8_t *data, uint8_t *output_data, int length);
 
+int check_packet_type(uint8_t *OBC_UART);
+
 #endif /* INC_ERROR_HANDLER_H_ */
